@@ -1,0 +1,8 @@
+{
+  "name": "@ralphy/monorepo",
+  "private": true,
+  "workspaces": ["cli"],
+  "scripts": {
+    "build": "bun --filter @ralphy/cli build"
+  }
+}

@@ -6,10 +6,10 @@ cli/dist/
 cli/src/version.ts
 
 # Landing page
-landing/node_modules/
-landing/.next/
-landing/out/
-landing/bun.lock
+node_modules/
+.next/
+out/
+bun.lock
 
 # Bun
 bun.lockb
