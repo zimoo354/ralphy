@@ -1,13 +1,10 @@
+import { NewTaskModal } from "./components/NewTaskModal";
+
 export default function Home() {
 	return (
 		<div className="flex h-screen flex-col bg-background">
 			<header className="flex shrink-0 justify-end border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-				<button
-					type="button"
-					className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-				>
-					New Task +
-				</button>
+				<NewTaskModal />
 			</header>
 			<main className="flex min-h-0 flex-1">
 				<section className="flex w-1/3 flex-col border-r border-zinc-200 dark:border-zinc-800">
