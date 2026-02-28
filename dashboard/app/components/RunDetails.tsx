@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { LogsViewer } from "./LogsViewer";
 
 interface RunDetailsData {
 	id: string;
@@ -71,8 +72,8 @@ export function RunDetails({ runId }: RunDetailsProps) {
 	}
 
 	return (
-		<div className="flex flex-1 flex-col overflow-auto p-3">
-			<div className="mb-3 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+		<div className="flex flex-1 min-h-0 flex-col overflow-hidden p-3">
+			<div className="mb-3 shrink-0 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
 				<p>
 					<strong>Repo:</strong> {details.repoPath}
 				</p>
@@ -101,11 +102,10 @@ export function RunDetails({ runId }: RunDetailsProps) {
 					</p>
 				)}
 			</div>
-			{details.log !== undefined && (
-				<pre className="min-h-0 flex-1 whitespace-pre-wrap rounded bg-zinc-100 p-3 font-mono text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-					{details.log || "(no output yet)"}
-				</pre>
-			)}
+			<LogsViewer
+				content={details.log ?? ""}
+				className="rounded border border-zinc-200 dark:border-zinc-800"
+			/>
 		</div>
 	);
 }
