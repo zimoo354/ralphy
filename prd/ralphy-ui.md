@@ -1,0 +1,55 @@
+## Tasks
+- [x] Initialize Next.js app (App Router) with TypeScript, Tailwind, and a minimal layout shell matching the single-screen sketch (./ralphy-sketch.png) (Runs pane + Logs pane + New Task button)
+- [x] Add local persistence folder in user home (e.g. ~/.ralphy-ui) and implement storage helpers for:
+  - runs.json (run index)
+  - repos.json (known repos)
+  - per-run folder (logs + args + tasks.md)
+- [x] Implement repo management APIs:
+  - GET /api/repos (list)
+  - POST /api/repos (add)
+  - Validate repo path is absolute and under os.homedir()
+- [x] Build "New Task" modal UI:
+  - repo path input (select from known repos + manual entry)
+  - mode toggle: Single Task vs PRD Markdown
+  - markdown textarea for tasks (for PRD mode)
+  - simple options: engine (Cursor default, Claude optional), run tests (true/false), run lint(true/false), fast, parallel + max-parallel, sandbox, create PR (optional)
+  - command preview (read-only)
+- [x] Implement Command Builder (pure function) that converts modal form state -> { cwd, argv[] } for spawning ralphy, including PRD markdown file writing for PRD mode
+- [x] Implement runs APIs:
+  - GET /api/runs (list)
+  - GET /api/runs/:id (details)
+  - POST /api/runs (create + start)
+  - POST /api/runs/:id/stop (stop)
+- [x] Implement process runner service:
+  - spawn ralphy with cwd=repoPath
+  - capture stdout/stderr to per-run log files
+  - update run status transitions: queued -> running -> succeeded/failed/stopped
+  - store exit code and timestamps
+  - keep an in-memory map of runId -> child process (for stop support)
+- [x] Implement logs API:
+  - GET /api/runs/:id/logs to return combined logs (or stdout/stderr separately)
+  - Optional: SSE endpoint to stream new lines only when Logs panel is open
+- [x] Build Runs list UI:
+  - show runs grouped by repo path
+  - show status + timestamp
+  - selecting a run loads details
+- [x] Build Logs viewer UI:
+  - on selecting a run, load logs on demand
+  - add "Refresh" button (simple polling) OR stream while panel is open (SSE)
+  - show command at top (what was executed)
+- [x] Add Stop button for running runs in UI:
+  - calls stop API
+  - confirms action
+- [x] Add basic run metadata panel (within logs area or header): repo path, engine, options, duration, exit code
+- [x] Add error handling + UX polish:
+  - friendly validation messages (repo path, empty task, invalid markdown)
+  - show last error lines when a run fails
+- [x] Add minimal README for the UI project:
+  - how to run locally
+  - where data is stored (~/.ralphy-ui)
+  - requirements: ralphy installed globally and cursor agent available
+- [x] Add a small test plan / smoke checks:
+  - create single task run
+  - create PRD markdown run
+  - stop run
+  - view logs after completion

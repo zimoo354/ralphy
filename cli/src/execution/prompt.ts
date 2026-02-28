@@ -20,6 +20,8 @@ interface PromptOptions {
  */
 function detectAgentSkills(workDir: string): string[] {
 	const candidates = [
+		join(workDir, ".agents", "skills"),
+		join(workDir, ".cursor", "rules"),
 		join(workDir, ".opencode", "skills"),
 		join(workDir, ".claude", "skills"),
 		join(workDir, ".github", "skills"),
