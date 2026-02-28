@@ -42,6 +42,11 @@ export function NewTaskModal() {
 		if (open) loadRepos();
 	}, [open, loadRepos]);
 
+	const close = useCallback(() => {
+		setOpen(false);
+		setState(defaultState);
+	}, []);
+
 	useEffect(() => {
 		if (!open) return;
 		const onKeyDown = (e: KeyboardEvent) => {
@@ -53,11 +58,6 @@ export function NewTaskModal() {
 
 	const update = useCallback((patch: Partial<NewTaskFormState>) => {
 		setState((s) => ({ ...s, ...patch }));
-	}, []);
-
-	const close = useCallback(() => {
-		setOpen(false);
-		setState(defaultState);
 	}, []);
 
 	const handleBackdropClick = (e: React.MouseEvent) => {
