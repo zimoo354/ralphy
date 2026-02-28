@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { LogsViewer } from "./LogsViewer";
 
+interface RunArgs {
+	engine?: string;
+	runTests?: boolean;
+	runLint?: boolean;
+	fast?: boolean;
+	parallel?: boolean;
+	maxParallel?: number;
+	sandbox?: boolean;
+	createPr?: boolean;
+}
+
 interface RunDetailsData {
 	id: string;
 	repoPath: string;
@@ -12,11 +23,42 @@ interface RunDetailsData {
 	endedAt?: string;
 	exitCode?: number;
 	log?: string;
+	args?: RunArgs;
 }
 
 interface RunDetailsProps {
 	runId: string | null;
 	onRunStopped?: () => void;
+}
+
+function formatDuration(startedAt?: string, endedAt?: string): string | null {
+	if (!startedAt || !endedAt) return null;
+	const start = new Date(startedAt).getTime();
+	const end = new Date(endedAt).getTime();
+	const ms = Math.max(0, end - start);
+	if (ms < 1000) return `${ms}ms`;
+	const sec = Math.floor(ms / 1000) % 60;
+	const min = Math.floor(ms / 60000) % 60;
+	const h = Math.floor(ms / 3600000);
+	const parts = [];
+	if (h > 0) parts.push(`${h}h`);
+	if (min > 0) parts.push(`${min}m`);
+	parts.push(`${sec}s`);
+	return parts.join(" ");
+}
+
+function formatOptions(args?: RunArgs): string {
+	if (!args) return "—";
+	const opts: string[] = [];
+	if (args.runTests !== false) opts.push("tests");
+	else opts.push("no-tests");
+	if (args.runLint !== false) opts.push("lint");
+	else opts.push("no-lint");
+	if (args.fast) opts.push("fast");
+	if (args.parallel) opts.push(`parallel${args.maxParallel !== 3 ? ` (max ${args.maxParallel})` : ""}`);
+	if (args.sandbox) opts.push("sandbox");
+	if (args.createPr) opts.push("create-pr");
+	return opts.length ? opts.join(", ") : "—";
 }
 
 export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
@@ -87,17 +129,14 @@ export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
 		);
 	}
 
+	const duration = formatDuration(details.startedAt, details.endedAt);
+
 	return (
 		<div className="flex flex-1 min-h-0 flex-col overflow-hidden p-3">
 			<div className="mb-3 flex shrink-0 items-start justify-between gap-2">
-				<div className="min-w-0 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-					<p>
-						<strong>Repo:</strong> {details.repoPath}
-					</p>
-					<p>
-						<strong>Status:</strong> {details.status}
-					</p>
-				</div>
+				<span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+					{details.status}
+				</span>
 				{details.status === "running" && (
 					<button
 						type="button"
@@ -109,28 +148,21 @@ export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
 					</button>
 				)}
 			</div>
-			<div className="mb-3 shrink-0 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-				<p>
-					<strong>Created:</strong>{" "}
-					{new Date(details.createdAt).toLocaleString()}
-				</p>
-				{details.startedAt && (
-					<p>
-						<strong>Started:</strong>{" "}
-						{new Date(details.startedAt).toLocaleString()}
-					</p>
-				)}
-				{details.endedAt && (
-					<p>
-						<strong>Ended:</strong>{" "}
-						{new Date(details.endedAt).toLocaleString()}
-					</p>
-				)}
-				{details.exitCode !== undefined && (
-					<p>
-						<strong>Exit code:</strong> {details.exitCode}
-					</p>
-				)}
+			<div className="mb-3 shrink-0 rounded border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
+				<div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
+					<span className="font-medium">Repo</span>
+					<span className="truncate font-mono" title={details.repoPath}>
+						{details.repoPath}
+					</span>
+					<span className="font-medium">Engine</span>
+					<span>{details.args?.engine ?? "—"}</span>
+					<span className="font-medium">Options</span>
+					<span className="min-w-0 break-words">{formatOptions(details.args)}</span>
+					<span className="font-medium">Duration</span>
+					<span>{duration ?? "—"}</span>
+					<span className="font-medium">Exit code</span>
+					<span>{details.exitCode !== undefined ? details.exitCode : "—"}</span>
+				</div>
 			</div>
 			<LogsViewer
 				content={details.log ?? ""}
