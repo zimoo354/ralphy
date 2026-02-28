@@ -1,8 +1,9 @@
 {
   "name": "@ralphy/monorepo",
   "private": true,
-  "workspaces": ["cli"],
+  "workspaces": ["cli", "dashboard"],
   "scripts": {
-    "build": "bun --filter @ralphy/cli build"
+    "build": "bun --filter @ralphy/cli build",
+    "dev": "bun --filter @ralphy/dashboard dev"
   }
 }
