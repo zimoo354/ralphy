@@ -29,6 +29,20 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: validated.error }, { status: 400 });
 	}
 
+	const taskTrimmed = typeof body.task === "string" ? body.task.trim() : "";
+	if (body.mode === "single" && !taskTrimmed) {
+		return NextResponse.json(
+			{ error: "Task description is required for single task mode" },
+			{ status: 400 },
+		);
+	}
+	if (body.mode === "prd" && !taskTrimmed) {
+		return NextResponse.json(
+			{ error: "PRD markdown content is required" },
+			{ status: 400 },
+		);
+	}
+
 	const runId = randomUUID();
 	const cmd = buildCommand(
 		{ ...body, repoPath: validated.path },

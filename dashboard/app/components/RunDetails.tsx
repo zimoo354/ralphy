@@ -130,9 +130,28 @@ export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
 	}
 
 	const duration = formatDuration(details.startedAt, details.endedAt);
+	const isTerminalFailure =
+		(details.status === "failed" || details.status === "stopped") &&
+		(details.log?.trim().length ?? 0) > 0;
+	const lastErrorLines = isTerminalFailure
+		? details.log!.trim().split("\n").slice(-15).join("\n")
+		: "";
 
 	return (
 		<div className="flex flex-1 min-h-0 flex-col overflow-hidden p-3">
+			{isTerminalFailure && (
+				<div
+					className="mb-3 shrink-0 rounded border border-red-200 bg-red-50 px-3 py-2 dark:border-red-800 dark:bg-red-950/50"
+					role="alert"
+				>
+					<p className="mb-1.5 text-xs font-semibold text-red-800 dark:text-red-200">
+						Last lines from run
+					</p>
+					<pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-red-700 dark:text-red-300">
+						{lastErrorLines}
+					</pre>
+				</div>
+			)}
 			<div className="mb-3 flex shrink-0 items-start justify-between gap-2">
 				<span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
 					{details.status}

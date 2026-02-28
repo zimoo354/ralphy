@@ -25,10 +25,19 @@ interface RepoRecord {
 	addedAt: string;
 }
 
-export function NewTaskModal() {
+export interface NewTaskModalProps {
+	onRunCreated?: () => void;
+}
+
+export function NewTaskModal({ onRunCreated }: NewTaskModalProps) {
 	const [open, setOpen] = useState(false);
 	const [repos, setRepos] = useState<RepoRecord[]>([]);
 	const [state, setState] = useState<NewTaskFormState>(defaultState);
+	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [fieldErrors, setFieldErrors] = useState<{
+		repo?: string;
+		task?: string;
+	}>({});
 
 	const loadRepos = useCallback(async () => {
 		const res = await fetch("/api/repos");
@@ -45,6 +54,8 @@ export function NewTaskModal() {
 	const close = useCallback(() => {
 		setOpen(false);
 		setState(defaultState);
+		setSubmitError(null);
+		setFieldErrors({});
 	}, []);
 
 	useEffect(() => {
@@ -58,6 +69,13 @@ export function NewTaskModal() {
 
 	const update = useCallback((patch: Partial<NewTaskFormState>) => {
 		setState((s) => ({ ...s, ...patch }));
+		setSubmitError(null);
+		setFieldErrors((e) => {
+			const next = { ...e };
+			if ("repoPath" in patch) delete next.repo;
+			if ("task" in patch) delete next.task;
+			return next;
+		});
 	}, []);
 
 	const handleBackdropClick = (e: React.MouseEvent) => {
@@ -68,6 +86,50 @@ export function NewTaskModal() {
 	const canRun =
 		state.repoPath.trim().length > 0 &&
 		(state.mode === "prd" || state.task.trim().length > 0);
+
+	const validate = useCallback((): boolean => {
+		const errors: { repo?: string; task?: string } = {};
+		if (!state.repoPath.trim()) {
+			errors.repo = "Repo path is required";
+		}
+		if (state.mode === "single" && !state.task.trim()) {
+			errors.task = "Task description is required";
+		}
+		if (state.mode === "prd" && !state.task.trim()) {
+			errors.task = "PRD markdown content is required";
+		}
+		setFieldErrors(errors);
+		return Object.keys(errors).length === 0;
+	}, [state.repoPath, state.mode, state.task]);
+
+	const [submitting, setSubmitting] = useState(false);
+	const handleSubmit = useCallback(
+		async (e: React.FormEvent) => {
+			e.preventDefault();
+			setSubmitError(null);
+			if (!validate()) return;
+			setSubmitting(true);
+			try {
+				const res = await fetch("/api/runs", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(state),
+				});
+				const data = await res.json().catch(() => ({}));
+				if (!res.ok) {
+					setSubmitError(
+						typeof data.error === "string" ? data.error : "Failed to start run",
+					);
+					return;
+				}
+				close();
+				onRunCreated?.();
+			} finally {
+				setSubmitting(false);
+			}
+		},
+		[state, validate, close, onRunCreated],
+	);
 
 	return (
 		<>
@@ -102,14 +164,16 @@ export function NewTaskModal() {
 
 						<form
 							className="space-y-4 p-4"
-							onSubmit={(e) => {
-								e.preventDefault();
-								if (canRun) {
-									// TODO: wire to run creation
-									close();
-								}
-							}}
+							onSubmit={handleSubmit}
 						>
+							{submitError && (
+								<div
+									className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200"
+									role="alert"
+								>
+									{submitError}
+								</div>
+							)}
 							{/* Repo path */}
 							<div>
 								<label
@@ -125,13 +189,24 @@ export function NewTaskModal() {
 									value={state.repoPath}
 									onChange={(e) => update({ repoPath: e.target.value })}
 									placeholder="/path/to/repo"
-									className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+									className={`w-full rounded border px-3 py-2 text-sm placeholder-zinc-400 dark:placeholder-zinc-500 ${
+										fieldErrors.repo
+											? "border-red-500 bg-red-50/50 dark:border-red-600 dark:bg-red-950/30"
+											: "border-zinc-300 bg-white text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+									}`}
+									aria-invalid={!!fieldErrors.repo}
+									aria-describedby={fieldErrors.repo ? "repo-error" : undefined}
 								/>
 								<datalist id="repo-list">
 									{repos.map((r) => (
 										<option key={r.path} value={r.path} />
 									))}
 								</datalist>
+								{fieldErrors.repo && (
+									<p id="repo-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+										{fieldErrors.repo}
+									</p>
+								)}
 							</div>
 
 							{/* Mode */}
@@ -185,8 +260,19 @@ export function NewTaskModal() {
 											? "Describe the task..."
 											: "Paste or write PRD markdown..."
 									}
-									className="w-full rounded border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 placeholder-zinc-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+									className={`w-full rounded border px-3 py-2 font-mono text-sm placeholder-zinc-400 dark:placeholder-zinc-500 ${
+										fieldErrors.task
+											? "border-red-500 bg-red-50/50 dark:border-red-600 dark:bg-red-950/30"
+											: "border-zinc-300 bg-white text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+									}`}
+									aria-invalid={!!fieldErrors.task}
+									aria-describedby={fieldErrors.task ? "task-error" : undefined}
 								/>
+								{fieldErrors.task && (
+									<p id="task-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+										{fieldErrors.task}
+									</p>
+								)}
 							</div>
 
 							{/* Options */}
@@ -338,10 +424,10 @@ export function NewTaskModal() {
 								</button>
 								<button
 									type="submit"
-									disabled={!canRun}
+									disabled={!canRun || submitting}
 									className="rounded border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-600 dark:hover:bg-zinc-500"
 								>
-									Run
+									{submitting ? "Starting…" : "Run"}
 								</button>
 							</div>
 						</form>
