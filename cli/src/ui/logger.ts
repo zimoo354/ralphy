@@ -66,6 +66,29 @@ export function formatDuration(ms: number): string {
 	return `${mins}m ${remainingSecs}s`;
 }
 
+type FileOp = "read" | "write" | "edit";
+
+const FILE_OP_COLORS: Record<FileOp, (s: string) => string> = {
+	read: pc.cyan,
+	write: pc.green,
+	edit: pc.yellow,
+};
+
+const FILE_OP_LABELS: Record<FileOp, string> = {
+	read: "[READ]",
+	write: "[WRITE]",
+	edit: "[EDIT]",
+};
+
+/**
+ * Log a file operation (read, write, edit) with colored output
+ */
+export function logFileOp(op: FileOp, filePath: string): void {
+	const color = FILE_OP_COLORS[op];
+	const label = FILE_OP_LABELS[op];
+	console.log(color(label), filePath);
+}
+
 /**
  * Format token count
  */
