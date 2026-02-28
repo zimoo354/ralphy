@@ -136,7 +136,7 @@ export function NewTaskModal({ onRunCreated }: NewTaskModalProps) {
 			<button
 				type="button"
 				onClick={() => setOpen(true)}
-				className="rounded border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+				className="border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 font-mono uppercase"
 			>
 				New Task +
 			</button>
@@ -150,10 +150,10 @@ export function NewTaskModal({ onRunCreated }: NewTaskModalProps) {
 					aria-labelledby="new-task-title"
 				>
 					<div
-						className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+						className="max-h-[90vh] w-full max-w-2xl overflow-auto border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
 						onClick={(e) => e.stopPropagation()}
 					>
-						<div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+						<div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
 							<h2
 								id="new-task-title"
 								className="text-lg font-semibold text-zinc-900 dark:text-zinc-100"
@@ -408,7 +408,7 @@ export function NewTaskModal({ onRunCreated }: NewTaskModalProps) {
 								</label>
 								<pre
 									id="command-preview"
-									className="rounded border border-zinc-200 bg-zinc-100 px-3 py-2 font-mono text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+									className="rounded border border-zinc-200 bg-zinc-100 px-3 py-2 font-mono text-xs text-zinc-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 text-wrap"
 								>
 									{preview || "ralphy (set repo and task)"}
 								</pre>
