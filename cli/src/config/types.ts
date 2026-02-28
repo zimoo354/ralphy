@@ -52,6 +52,8 @@ export const RalphyConfigSchema = z.object({
 		.default([]),
 	boundaries: BoundariesSchema.default({}),
 	notifications: NotificationsSchema.default({}),
+	contextWindowThreshold: z.number().default(0.8),
+	maxContextTokens: z.number().int().default(200000),
 });
 
 /**
