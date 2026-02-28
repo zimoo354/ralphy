@@ -1757,21 +1757,18 @@ parse_ai_result() {
       fi
       ;;
     cursor)
-      # Cursor agent: parse stream-json output
-      # Cursor doesn't provide token counts, but does provide duration_ms
+      # Cursor agent: parse stream-json output (usage uses camelCase: inputTokens, outputTokens)
 
       local result_line
       result_line=$(echo "$result" | grep '"type":"result"' | tail -1)
 
       if [[ -n "$result_line" ]]; then
         response=$(echo "$result_line" | jq -r '.result // "Task completed"' 2>/dev/null || echo "Task completed")
-        # Cursor provides duration instead of tokens
+        input_tokens=$(echo "$result_line" | jq -r '.usage.inputTokens // 0' 2>/dev/null || echo "0")
+        output_tokens=$(echo "$result_line" | jq -r '.usage.outputTokens // 0' 2>/dev/null || echo "0")
         local duration_ms
         duration_ms=$(echo "$result_line" | jq -r '.duration_ms // 0' 2>/dev/null || echo "0")
-        # Store duration in output_tokens field for now (we'll handle it specially)
-        # Use negative value as marker that this is duration, not tokens
         if [[ "$duration_ms" =~ ^[0-9]+$ ]] && [[ "$duration_ms" -gt 0 ]]; then
-          # Encode duration: store as-is, we track separately
           actual_cost="duration:$duration_ms"
         fi
       fi
@@ -1784,10 +1781,6 @@ parse_ai_result() {
           response=$(echo "$assistant_msg" | jq -r '.message.content[0].text // .message.content // "Task completed"' 2>/dev/null || echo "Task completed")
         fi
       fi
-
-      # Tokens remain 0 for Cursor (not available)
-      input_tokens=0
-      output_tokens=0
       ;;
     copilot)
       # Copilot: extract response from text output
