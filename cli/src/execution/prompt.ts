@@ -32,6 +32,21 @@ function detectAgentSkills(workDir: string): string[] {
 }
 
 /**
+ * Get the code change rules
+ */
+function getCodeChangeRules(workDir: string): string[] {
+	const rules = loadRules(workDir);
+	return [
+		"Keep changes focused and minimal. Do not refactor unrelated code.",
+		"One logical change per commit. If a task is too large, break it into subtasks.",
+		"Write concise code. Avoid over-engineering.",
+		"Don't leave dead code. Delete unused code completely.",
+		"Quality over speed. Small steps compound into big progress.",
+		...rules,
+	];
+}
+
+/**
  * Build the full prompt with project context, rules, boundaries, and task
  */
 export function buildPrompt(options: PromptOptions): string {
@@ -54,15 +69,7 @@ export function buildPrompt(options: PromptOptions): string {
 	}
 
 	// Add rules if available
-	const rules = loadRules(workDir);
-	const codeChangeRules = [
-		"Keep changes focused and minimal. Do not refactor unrelated code.",
-		"One logical change per commit. If a task is too large, break it into subtasks.",
-		"Write concise code. Avoid over-engineering.",
-		"Don't leave dead code. Delete unused code completely.",
-		"Quality over speed. Small steps compound into big progress.",
-		...rules,
-	];
+	const codeChangeRules = getCodeChangeRules(workDir);
 	if (codeChangeRules.length > 0) {
 		parts.push(
 			`## Rules (you MUST follow these)\n${codeChangeRules.map((r) => `- ${r}`).join("\n")}`,
@@ -133,7 +140,8 @@ export function buildPrompt(options: PromptOptions): string {
 
 	parts.push(`## Instructions\n${instructions.join("\n")}`);
 
-	return parts.join("\n\n");
+	const prompt = parts.join("\n\n");
+	return prompt;
 }
 
 interface ParallelPromptOptions {
@@ -178,15 +186,7 @@ export function buildParallelPrompt(options: ParallelPromptOptions): string {
 		: "";
 
 	// Load rules from config
-	const rules = loadRules(workDir);
-	const codeChangeRules = [
-		"Keep changes focused and minimal. Do not refactor unrelated code.",
-		"One logical change per commit. If a task is too large, break it into subtasks.",
-		"Write concise code. Avoid over-engineering.",
-		"Don't leave dead code. Delete unused code completely.",
-		"Quality over speed. Small steps compound into big progress.",
-		...rules,
-	];
+	const codeChangeRules = getCodeChangeRules(workDir);
 	const rulesSection =
 		codeChangeRules.length > 0
 			? `\n\nRules (you MUST follow these):\n${codeChangeRules.map((r) => `- ${r}`).join("\n")}`
