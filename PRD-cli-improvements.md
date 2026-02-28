@@ -82,14 +82,14 @@ Files to modify:
 
 ## Tasks
 
-- [ ] Add logFileOp() helper to cli/src/ui/logger.ts with colored output for read, write, and edit file operations
-- [ ] Parse tool_use events from Claude stream-json in executeStreaming() and call logFileOp() for Read, Write, Edit, and Bash tool uses
-- [ ] Add regex-based file operation detection to Cursor engine stdout parser and call logFileOp()
-- [ ] Add contextWindowThreshold (default 0.8) and maxContextTokens (default 200000) to RalphyConfig schema in cli/src/config/types.ts
-- [ ] Track cumulative input_tokens in Claude streaming handler and emit a named event when threshold is crossed
-- [ ] Handle threshold event in cli/src/execution/sequential.ts — write context-checkpoint.md and trigger task restart
-- [ ] Update prompt builder in cli/src/execution/prompt.ts to detect and inject .ralphy/context-checkpoint.md when present
-- [ ] Add skills_dir field to RalphyConfig schema with default value of .ralphy/skills
-- [ ] Update prompt builder to read all .md files from skills_dir and inject their content under a Knowledge Base section
-- [ ] Add --skills-dir CLI flag to cli/src/cli/args.ts
-- [ ] Update --init command in cli/src/config/writer.ts to create .ralphy/skills/ directory with a placeholder README.md
+- [x] Add logFileOp() helper to cli/src/ui/logger.ts with colored output for read, write, and edit file operations
+- [x] Parse tool_use events from Claude stream-json in executeStreaming() and call logFileOp() for Read, Write, Edit, and Bash tool uses
+- [x] Add regex-based file operation detection to Cursor engine stdout parser and call logFileOp()
+- [x] Add contextWindowThreshold (default 0.8) and maxContextTokens (default 200000) to RalphyConfig schema in cli/src/config/types.ts
+- [x] Track cumulative input_tokens in Claude streaming handler and emit a named event when threshold is crossed
+- [x] Handle threshold event in cli/src/execution/sequential.ts — write context-checkpoint.md and trigger task restart
+- [x] Update prompt builder in cli/src/execution/prompt.ts to detect and inject .ralphy/context-checkpoint.md when present
+- [x] Add skills_dir field to RalphyConfig schema with default value of .ralphy/skills
+- [x] Update prompt builder to read all .md files from skills_dir and inject their content under a Knowledge Base section
+- [x] Add --skills-dir CLI flag to cli/src/cli/args.ts
+- [x] Update --init command in cli/src/config/writer.ts to create .ralphy/skills/ directory with a placeholder README.md
