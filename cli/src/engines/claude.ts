@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import { logFileOp } from "../ui/logger.ts";
 import {
 	BaseAIEngine,
@@ -9,6 +10,12 @@ import {
 	parseStreamJsonResult,
 } from "./base.ts";
 import type { AIResult, EngineOptions, ProgressCallback } from "./types.ts";
+
+/**
+ * Shared event emitter for Claude engine lifecycle events.
+ * Emits 'context-window-threshold' when cumulative input tokens cross the configured threshold.
+ */
+export const claudeEngineEvents = new EventEmitter();
 
 type ToolUseEvent = { tool: "Read" | "Write" | "Edit" | "Bash"; value: string };
 
@@ -47,6 +54,25 @@ export function extractToolUseEvents(line: string): ToolUseEvent[] {
 	} catch {
 		return [];
 	}
+}
+
+/**
+ * Extract input_tokens from a Claude stream-json assistant message.
+ * Returns the token count if present, null otherwise.
+ */
+export function extractInputTokensFromLine(line: string): number | null {
+	const trimmed = line.trim();
+	if (!trimmed.startsWith("{")) return null;
+
+	try {
+		const parsed = JSON.parse(trimmed);
+		if (parsed.type === "assistant" && typeof parsed.message?.usage?.input_tokens === "number") {
+			return parsed.message.usage.input_tokens;
+		}
+	} catch {
+		// ignore non-JSON or malformed lines
+	}
+	return null;
 }
 
 const isWindows = process.platform === "win32";
@@ -149,6 +175,11 @@ export class ClaudeEngine extends BaseAIEngine {
 
 		const outputLines: string[] = [];
 
+		const contextThreshold = options?.contextWindowThreshold ?? 0;
+		const maxContextTokens = options?.maxContextTokens ?? 0;
+		let cumulativeInputTokens = 0;
+		let thresholdEmitted = false;
+
 		const { exitCode } = await execCommandStreaming(
 			this.cliCommand,
 			args,
@@ -168,6 +199,22 @@ export class ClaudeEngine extends BaseAIEngine {
 					else if (tool === "Write") logFileOp("write", value);
 					else if (tool === "Edit") logFileOp("edit", value);
 					else if (tool === "Bash") logFileOp("bash", value);
+				}
+
+				// Track cumulative input tokens and emit threshold event
+				if (contextThreshold > 0 && maxContextTokens > 0 && !thresholdEmitted) {
+					const lineTokens = extractInputTokensFromLine(line);
+					if (lineTokens !== null) {
+						cumulativeInputTokens += lineTokens;
+						if (cumulativeInputTokens >= contextThreshold * maxContextTokens) {
+							thresholdEmitted = true;
+							claudeEngineEvents.emit("context-window-threshold", {
+								cumulativeInputTokens,
+								threshold: contextThreshold,
+								maxContextTokens,
+							});
+						}
+					}
 				}
 			},
 			undefined,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { extractToolUseEvents } from "./claude.ts";
+import { EventEmitter } from "node:events";
+import { claudeEngineEvents, extractInputTokensFromLine, extractToolUseEvents } from "./claude.ts";
 
 describe("extractToolUseEvents", () => {
 	it("returns empty array for non-JSON lines", () => {
@@ -140,5 +141,150 @@ describe("extractToolUseEvents", () => {
 			{ tool: "Read", value: "a.ts" },
 			{ tool: "Edit", value: "b.ts" },
 		]);
+	});
+});
+
+describe("extractInputTokensFromLine", () => {
+	it("returns null for non-JSON lines", () => {
+		expect(extractInputTokensFromLine("not json")).toBeNull();
+		expect(extractInputTokensFromLine("")).toBeNull();
+	});
+
+	it("returns null for lines not starting with {", () => {
+		expect(extractInputTokensFromLine("[1,2,3]")).toBeNull();
+	});
+
+	it("returns null for non-assistant type events", () => {
+		const line = JSON.stringify({ type: "result", usage: { input_tokens: 100 } });
+		expect(extractInputTokensFromLine(line)).toBeNull();
+	});
+
+	it("returns null when message.usage is missing", () => {
+		const line = JSON.stringify({ type: "assistant", message: { content: [] } });
+		expect(extractInputTokensFromLine(line)).toBeNull();
+	});
+
+	it("returns null when input_tokens is not a number", () => {
+		const line = JSON.stringify({
+			type: "assistant",
+			message: { usage: { input_tokens: "100" } },
+		});
+		expect(extractInputTokensFromLine(line)).toBeNull();
+	});
+
+	it("extracts input_tokens from an assistant message", () => {
+		const line = JSON.stringify({
+			type: "assistant",
+			message: { usage: { input_tokens: 1234, output_tokens: 56 } },
+		});
+		expect(extractInputTokensFromLine(line)).toBe(1234);
+	});
+
+	it("returns null for malformed JSON", () => {
+		expect(extractInputTokensFromLine("{invalid json")).toBeNull();
+	});
+});
+
+describe("claudeEngineEvents", () => {
+	it("is an EventEmitter instance", () => {
+		expect(claudeEngineEvents).toBeInstanceOf(EventEmitter);
+	});
+
+	it("emits and receives context-window-threshold events", () => {
+		const received: unknown[] = [];
+		const handler = (payload: unknown) => received.push(payload);
+
+		claudeEngineEvents.on("context-window-threshold", handler);
+		claudeEngineEvents.emit("context-window-threshold", {
+			cumulativeInputTokens: 160000,
+			threshold: 0.8,
+			maxContextTokens: 200000,
+		});
+		claudeEngineEvents.off("context-window-threshold", handler);
+
+		expect(received).toHaveLength(1);
+		expect(received[0]).toEqual({
+			cumulativeInputTokens: 160000,
+			threshold: 0.8,
+			maxContextTokens: 200000,
+		});
+	});
+
+	it("emits context-window-threshold once when cumulative tokens cross threshold", () => {
+		const emitted: unknown[] = [];
+		const handler = (payload: unknown) => emitted.push(payload);
+		claudeEngineEvents.on("context-window-threshold", handler);
+
+		// Simulate the threshold logic: accumulate tokens across two turns
+		const threshold = 0.8;
+		const maxContextTokens = 10000;
+		let cumulativeInputTokens = 0;
+		let thresholdEmitted = false;
+
+		const lines = [
+			JSON.stringify({ type: "assistant", message: { usage: { input_tokens: 5000 } } }),
+			JSON.stringify({ type: "assistant", message: { usage: { input_tokens: 4000 } } }),
+		];
+
+		for (const line of lines) {
+			if (!thresholdEmitted) {
+				const lineTokens = extractInputTokensFromLine(line);
+				if (lineTokens !== null) {
+					cumulativeInputTokens += lineTokens;
+					if (cumulativeInputTokens >= threshold * maxContextTokens) {
+						thresholdEmitted = true;
+						claudeEngineEvents.emit("context-window-threshold", {
+							cumulativeInputTokens,
+							threshold,
+							maxContextTokens,
+						});
+					}
+				}
+			}
+		}
+
+		claudeEngineEvents.off("context-window-threshold", handler);
+
+		expect(emitted).toHaveLength(1);
+		expect(emitted[0]).toMatchObject({
+			cumulativeInputTokens: 9000,
+			threshold: 0.8,
+			maxContextTokens: 10000,
+		});
+	});
+
+	it("does not emit when tokens stay below threshold", () => {
+		const emitted: unknown[] = [];
+		const handler = (payload: unknown) => emitted.push(payload);
+		claudeEngineEvents.on("context-window-threshold", handler);
+
+		const threshold = 0.8;
+		const maxContextTokens = 10000;
+		let cumulativeInputTokens = 0;
+		let thresholdEmitted = false;
+
+		const line = JSON.stringify({
+			type: "assistant",
+			message: { usage: { input_tokens: 1000 } },
+		});
+
+		if (!thresholdEmitted) {
+			const lineTokens = extractInputTokensFromLine(line);
+			if (lineTokens !== null) {
+				cumulativeInputTokens += lineTokens;
+				if (cumulativeInputTokens >= threshold * maxContextTokens) {
+					thresholdEmitted = true;
+					claudeEngineEvents.emit("context-window-threshold", {
+						cumulativeInputTokens,
+						threshold,
+						maxContextTokens,
+					});
+				}
+			}
+		}
+
+		claudeEngineEvents.off("context-window-threshold", handler);
+
+		expect(emitted).toHaveLength(0);
 	});
 });

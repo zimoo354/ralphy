@@ -19,6 +19,10 @@ export interface EngineOptions {
 	modelOverride?: string;
 	/** Additional arguments to pass to the engine CLI */
 	engineArgs?: string[];
+	/** Fraction of context window (0–1) that triggers the threshold event */
+	contextWindowThreshold?: number;
+	/** Maximum context tokens for the model (used with contextWindowThreshold) */
+	maxContextTokens?: number;
 }
 
 /**
