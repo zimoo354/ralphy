@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": ["cli", "dashboard"],
   "scripts": {
-    "build": "bun --filter @ralphy/cli build",
-    "dev": "bun --filter @ralphy/dashboard dev"
+    "cli:build": "bun --filter @ralphy/cli build",
+    "cli:dev": "bun --filter @ralphy/cli dev",
+    "dashboard": "bun --filter @ralphy/dashboard dev"
   }
 }

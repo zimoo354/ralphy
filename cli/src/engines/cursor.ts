@@ -58,7 +58,7 @@ export class CursorEngine extends BaseAIEngine {
 		}
 
 		// Parse Cursor output
-		const { response, durationMs } = this.parseOutput(output);
+		const { response, durationMs, inputTokens, outputTokens } = this.parseOutput(output);
 
 		// If command failed with non-zero exit code, provide a meaningful error
 		if (exitCode !== 0) {
@@ -74,16 +74,23 @@ export class CursorEngine extends BaseAIEngine {
 		return {
 			success: true,
 			response,
-			inputTokens: 0, // Cursor doesn't provide token counts
-			outputTokens: 0,
+			inputTokens,
+			outputTokens,
 			cost: durationMs > 0 ? `duration:${durationMs}` : undefined,
 		};
 	}
 
-	private parseOutput(output: string): { response: string; durationMs: number } {
+	private parseOutput(output: string): {
+		response: string;
+		durationMs: number;
+		inputTokens: number;
+		outputTokens: number;
+	} {
 		const lines = output.split("\n").filter(Boolean);
 		let response = "";
 		let durationMs = 0;
+		let inputTokens = 0;
+		let outputTokens = 0;
 
 		for (const line of lines) {
 			try {
@@ -94,6 +101,13 @@ export class CursorEngine extends BaseAIEngine {
 					response = parsed.result || "Task completed";
 					if (typeof parsed.duration_ms === "number") {
 						durationMs = parsed.duration_ms;
+					}
+					const usage = parsed.usage;
+					if (usage && typeof usage.inputTokens === "number") {
+						inputTokens = usage.inputTokens;
+					}
+					if (usage && typeof usage.outputTokens === "number") {
+						outputTokens = usage.outputTokens;
 					}
 				}
 
@@ -111,7 +125,7 @@ export class CursorEngine extends BaseAIEngine {
 			}
 		}
 
-		return { response: response || "Task completed", durationMs };
+		return { response: response || "Task completed", durationMs, inputTokens, outputTokens };
 	}
 
 	async executeStreaming(
@@ -171,7 +185,7 @@ export class CursorEngine extends BaseAIEngine {
 		}
 
 		// Parse Cursor output
-		const { response, durationMs } = this.parseOutput(output);
+		const { response, durationMs, inputTokens, outputTokens } = this.parseOutput(output);
 
 		// If command failed with non-zero exit code, provide a meaningful error
 		if (exitCode !== 0) {
@@ -187,8 +201,8 @@ export class CursorEngine extends BaseAIEngine {
 		return {
 			success: true,
 			response,
-			inputTokens: 0,
-			outputTokens: 0,
+			inputTokens,
+			outputTokens,
 			cost: durationMs > 0 ? `duration:${durationMs}` : undefined,
 		};
 	}
