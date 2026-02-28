@@ -1,3 +1,8 @@
+---
+description: Project rules for Cursor and repo conventions
+alwaysApply: true
+---
+
 # Cursor Rules for Ralphy
 
 ## Code Change Philosophy
