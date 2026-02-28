@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { RunDetails } from "./RunDetails";
 import { RunsList } from "./RunsList";
 
-export function DashboardMain() {
+interface DashboardMainProps {
+	refreshTrigger: number;
+	onRunStopped: () => void;
+}
+
+export function DashboardMain({
+	refreshTrigger,
+	onRunStopped,
+}: DashboardMainProps) {
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-	const [refreshTrigger, setRefreshTrigger] = useState(0);
-	const onRunStopped = useCallback(() => setRefreshTrigger((n) => n + 1), []);
 
 	return (
 		<main className="flex min-h-0 flex-1">
