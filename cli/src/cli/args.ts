@@ -56,6 +56,7 @@ export function createProgram(): Command {
 		.option("--model <name>", "Override default model for the engine")
 		.option("--sonnet", "Shortcut for --claude --model sonnet")
 		.option("--no-merge", "Skip automatic branch merging after parallel execution")
+		.option("--skills-dir <path>", "Override skills directory (default: .ralphy/skills)")
 		.option("-v, --verbose", "Verbose output")
 		.allowUnknownOption();
 
@@ -159,6 +160,7 @@ export function parseArgs(args: string[]): {
 		skipMerge: opts.merge === false,
 		useSandbox: opts.sandbox || false,
 		engineArgs,
+		skillsDir: opts.skillsDir || undefined,
 	};
 
 	return {

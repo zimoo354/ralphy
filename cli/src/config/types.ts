@@ -118,6 +118,8 @@ export interface RuntimeOptions {
 	useSandbox?: boolean;
 	/** Additional arguments to pass to the engine CLI */
 	engineArgs?: string[];
+	/** Override the skills directory path */
+	skillsDir?: string;
 }
 
 /**
