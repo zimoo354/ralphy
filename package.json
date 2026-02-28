@@ -3,6 +3,9 @@
   "private": true,
   "workspaces": ["cli"],
   "scripts": {
-    "build": "bun --filter @ralphy/cli build"
+    "build": "bun --filter @ralphy/cli build",
+    "dev": "bun --filter @ralphy/cli dev",
+    "check": "bun --filter @ralphy/cli check",
+    "test": "bun --filter @ralphy/cli test"
   }
 }
