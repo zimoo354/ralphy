@@ -54,6 +54,7 @@ export const RalphyConfigSchema = z.object({
 	notifications: NotificationsSchema.default({}),
 	contextWindowThreshold: z.number().default(0.8),
 	maxContextTokens: z.number().int().default(200000),
+	skills_dir: z.string().default(".ralphy/skills"),
 });
 
 /**

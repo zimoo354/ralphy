@@ -48,6 +48,22 @@ describe("RalphyConfigSchema", () => {
 		});
 	});
 
+	describe("skills_dir", () => {
+		it("defaults to .ralphy/skills", () => {
+			const config = RalphyConfigSchema.parse({});
+			expect(config.skills_dir).toBe(".ralphy/skills");
+		});
+
+		it("accepts a custom value", () => {
+			const config = RalphyConfigSchema.parse({ skills_dir: "custom/skills" });
+			expect(config.skills_dir).toBe("custom/skills");
+		});
+
+		it("rejects non-string values", () => {
+			expect(() => RalphyConfigSchema.parse({ skills_dir: 123 })).toThrow();
+		});
+	});
+
 	describe("full config parsing", () => {
 		it("parses a complete config with both fields", () => {
 			const config = RalphyConfigSchema.parse({
