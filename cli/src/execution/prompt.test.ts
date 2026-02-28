@@ -228,6 +228,51 @@ rules:
 		});
 	});
 
+	describe("Context Checkpoint", () => {
+		it("should inject context checkpoint when file exists", () => {
+			writeFileSync(
+				join(ralphyDir, "context-checkpoint.md"),
+				"Previously completed: Set up auth module.",
+			);
+
+			const result = buildPrompt({ task: "Continue work", workDir: testWorkDir });
+
+			expect(result).toContain("## Context Checkpoint");
+			expect(result).toContain("Previously completed: Set up auth module.");
+		});
+
+		it("should not include context checkpoint section when file is absent", () => {
+			const result = buildPrompt({ task: "New task", workDir: testWorkDir });
+
+			expect(result).not.toContain("## Context Checkpoint");
+		});
+
+		it("should not include context checkpoint section when file is empty", () => {
+			writeFileSync(join(ralphyDir, "context-checkpoint.md"), "");
+
+			const result = buildPrompt({ task: "New task", workDir: testWorkDir });
+
+			expect(result).not.toContain("## Context Checkpoint");
+		});
+
+		it("should inject checkpoint after project context and before rules", () => {
+			writeFileSync(
+				join(ralphyDir, "config.yaml"),
+				"project:\n  name: Test\n  language: TypeScript\n",
+			);
+			writeFileSync(join(ralphyDir, "context-checkpoint.md"), "Checkpoint content here.");
+
+			const result = buildPrompt({ task: "Task", workDir: testWorkDir });
+
+			const contextIndex = result.indexOf("## Project Context");
+			const checkpointIndex = result.indexOf("## Context Checkpoint");
+			const rulesIndex = result.indexOf("## Rules");
+
+			expect(checkpointIndex).toBeGreaterThan(contextIndex);
+			expect(checkpointIndex).toBeLessThan(rulesIndex);
+		});
+	});
+
 	describe("No Final Note at End", () => {
 		it("should not have scattered Do NOT modify notes at the end", () => {
 			const result = buildPrompt({
@@ -439,6 +484,71 @@ describe("buildParallelPrompt", () => {
 			});
 
 			expect(result).not.toContain("Run linting and ensure it passes");
+		});
+	});
+
+	describe("Context Checkpoint", () => {
+		const testWorkDir2 = join(tmpdir(), "parallel-checkpoint-test");
+		const ralphyDir2 = join(testWorkDir2, ".ralphy");
+
+		beforeEach(() => {
+			mkdirSync(ralphyDir2, { recursive: true });
+		});
+
+		afterEach(() => {
+			rmSync(testWorkDir2, { recursive: true, force: true });
+		});
+
+		it("should inject context checkpoint when file exists", () => {
+			writeFileSync(join(ralphyDir2, "context-checkpoint.md"), "Checkpoint: auth done.");
+
+			const result = buildParallelPrompt({
+				task: "Next task",
+				progressFile: ".ralphy/progress.txt",
+				workDir: testWorkDir2,
+			});
+
+			expect(result).toContain("Context Checkpoint:");
+			expect(result).toContain("Checkpoint: auth done.");
+		});
+
+		it("should not include context checkpoint when file is absent", () => {
+			const result = buildParallelPrompt({
+				task: "Next task",
+				progressFile: ".ralphy/progress.txt",
+				workDir: testWorkDir2,
+			});
+
+			expect(result).not.toContain("Context Checkpoint:");
+		});
+
+		it("should not include context checkpoint when file is empty", () => {
+			writeFileSync(join(ralphyDir2, "context-checkpoint.md"), "");
+
+			const result = buildParallelPrompt({
+				task: "Next task",
+				progressFile: ".ralphy/progress.txt",
+				workDir: testWorkDir2,
+			});
+
+			expect(result).not.toContain("Context Checkpoint:");
+		});
+
+		it("should inject checkpoint after rules and before boundaries", () => {
+			writeFileSync(join(ralphyDir2, "context-checkpoint.md"), "Some checkpoint.");
+
+			const result = buildParallelPrompt({
+				task: "Task",
+				progressFile: ".ralphy/progress.txt",
+				workDir: testWorkDir2,
+			});
+
+			const rulesIndex = result.indexOf("Rules (you MUST follow these):");
+			const checkpointIndex = result.indexOf("Context Checkpoint:");
+			const boundariesIndex = result.indexOf("Boundaries - Do NOT modify:");
+
+			expect(checkpointIndex).toBeGreaterThan(rulesIndex);
+			expect(checkpointIndex).toBeLessThan(boundariesIndex);
 		});
 	});
 

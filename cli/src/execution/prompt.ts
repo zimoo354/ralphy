@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadBoundaries, loadProjectContext, loadRules } from "../config/loader.ts";
 import { getBrowserInstructions, isBrowserAvailable } from "./browser.ts";
@@ -49,6 +49,15 @@ export function buildPrompt(options: PromptOptions): string {
 	const context = loadProjectContext(workDir);
 	if (context) {
 		parts.push(`## Project Context\n${context}`);
+	}
+
+	// Add context checkpoint if present
+	const checkpointPath = join(workDir, ".ralphy", "context-checkpoint.md");
+	if (existsSync(checkpointPath)) {
+		const checkpoint = readFileSync(checkpointPath, "utf-8").trim();
+		if (checkpoint) {
+			parts.push(`## Context Checkpoint\n${checkpoint}`);
+		}
 	}
 
 	// Add rules if available
@@ -190,6 +199,15 @@ export function buildParallelPrompt(options: ParallelPromptOptions): string {
 			? `\n\nRules (you MUST follow these):\n${codeChangeRules.map((r) => `- ${r}`).join("\n")}`
 			: "";
 
+	// Add context checkpoint if present
+	const checkpointPath = join(workDir, ".ralphy", "context-checkpoint.md");
+	const checkpointSection = existsSync(checkpointPath)
+		? (() => {
+				const checkpoint = readFileSync(checkpointPath, "utf-8").trim();
+				return checkpoint ? `\n\nContext Checkpoint:\n${checkpoint}` : "";
+			})()
+		: "";
+
 	// Build boundaries section - combine system boundaries with user-defined boundaries
 	// System boundaries come first to ensure they are prominently visible
 	const userBoundaries = loadBoundaries(workDir);
@@ -227,7 +245,7 @@ export function buildParallelPrompt(options: ParallelPromptOptions): string {
 
 	return `You are working on a specific task. Focus ONLY on this task:
 
-TASK: ${task}${rulesSection}${boundariesSection}${browserSection}${skillsSection}
+TASK: ${task}${rulesSection}${checkpointSection}${boundariesSection}${browserSection}${skillsSection}
 
 Instructions:
 ${instructions.join("\n")}
