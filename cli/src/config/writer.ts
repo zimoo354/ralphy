@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { appendFile } from "node:fs/promises";
+import { join } from "node:path";
 import YAML from "yaml";
 import { detectProject } from "./detector.ts";
 import { getConfigPath, getProgressPath, getRalphyDir } from "./loader.ts";
@@ -54,6 +55,25 @@ function escapeYaml(value: string | undefined | null): string {
 	return (value || "").replace(/"/g, '\\"');
 }
 
+const SKILLS_README = `# Skills Directory
+
+Place \`.md\` files here to inject domain knowledge into every agent prompt.
+
+Each file is included under a **Knowledge Base** section so the AI agent can reference
+coding guidelines, architecture docs, API references, or any context relevant to your project.
+
+## Examples
+
+- \`typescript-patterns.md\` — preferred TypeScript idioms and conventions
+- \`api-reference.md\` — internal API endpoints and usage notes
+- \`architecture.md\` — system design overview and component responsibilities
+
+## Usage
+
+Files are loaded alphabetically. Keep each file focused on a single topic.
+Use the \`skills_dir\` config option (or \`--skills-dir\` CLI flag) to point to a different directory.
+`;
+
 /**
  * Initialize the .ralphy directory with config files
  */
@@ -79,6 +99,16 @@ export function initConfig(workDir = process.cwd()): {
 
 	// Create progress file
 	writeFileSync(progressPath, "# Ralphy Progress Log\n\n", "utf-8");
+
+	// Create skills directory with placeholder README
+	const skillsDir = join(ralphyDir, "skills");
+	if (!existsSync(skillsDir)) {
+		mkdirSync(skillsDir, { recursive: true });
+	}
+	const skillsReadme = join(skillsDir, "README.md");
+	if (!existsSync(skillsReadme)) {
+		writeFileSync(skillsReadme, SKILLS_README, "utf-8");
+	}
 
 	return { created: true, detected };
 }
