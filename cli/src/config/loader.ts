@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import YAML from "yaml";
 import { type RalphyConfig, RalphyConfigSchema } from "./types.ts";
@@ -94,6 +94,24 @@ export function loadLintCommand(workDir = process.cwd()): string {
 export function loadBuildCommand(workDir = process.cwd()): string {
 	const config = loadConfig(workDir);
 	return config?.commands.build ?? "";
+}
+
+/**
+ * Load all .md files from the configured skills_dir and return their name + content.
+ */
+export function loadSkillsContent(
+	workDir = process.cwd(),
+): Array<{ name: string; content: string }> {
+	const config = loadConfig(workDir);
+	const skillsDir = join(workDir, config?.skills_dir ?? ".ralphy/skills");
+
+	if (!existsSync(skillsDir)) return [];
+
+	return readdirSync(skillsDir)
+		.filter((f) => f.endsWith(".md"))
+		.sort()
+		.map((file) => ({ name: file, content: readFileSync(join(skillsDir, file), "utf-8").trim() }))
+		.filter((s) => s.content.length > 0);
 }
 
 /**

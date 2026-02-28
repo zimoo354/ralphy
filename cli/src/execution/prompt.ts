@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { loadBoundaries, loadProjectContext, loadRules } from "../config/loader.ts";
+import {
+	loadBoundaries,
+	loadProjectContext,
+	loadRules,
+	loadSkillsContent,
+} from "../config/loader.ts";
 import { getBrowserInstructions, isBrowserAvailable } from "./browser.ts";
 
 interface PromptOptions {
@@ -112,6 +117,13 @@ export function buildPrompt(options: PromptOptions): string {
 		parts.push(getBrowserInstructions());
 	}
 
+	// Add Knowledge Base from skills_dir
+	const skills = loadSkillsContent(workDir);
+	if (skills.length > 0) {
+		const skillSections = skills.map((s) => `### ${s.name}\n${s.content}`).join("\n\n");
+		parts.push(`## Knowledge Base\n${skillSections}`);
+	}
+
 	// Add the task
 	parts.push(`## Task\n${task}`);
 
@@ -199,6 +211,13 @@ export function buildParallelPrompt(options: ParallelPromptOptions): string {
 			? `\n\nRules (you MUST follow these):\n${codeChangeRules.map((r) => `- ${r}`).join("\n")}`
 			: "";
 
+	// Knowledge Base from skills_dir
+	const parallelSkills = loadSkillsContent(workDir);
+	const knowledgeBaseSection =
+		parallelSkills.length > 0
+			? `\n\nKnowledge Base:\n${parallelSkills.map((s) => `### ${s.name}\n${s.content}`).join("\n\n")}`
+			: "";
+
 	// Add context checkpoint if present
 	const checkpointPath = join(workDir, ".ralphy", "context-checkpoint.md");
 	const checkpointSection = existsSync(checkpointPath)
@@ -245,7 +264,7 @@ export function buildParallelPrompt(options: ParallelPromptOptions): string {
 
 	return `You are working on a specific task. Focus ONLY on this task:
 
-TASK: ${task}${rulesSection}${checkpointSection}${boundariesSection}${browserSection}${skillsSection}
+TASK: ${task}${rulesSection}${checkpointSection}${boundariesSection}${browserSection}${skillsSection}${knowledgeBaseSection}
 
 Instructions:
 ${instructions.join("\n")}

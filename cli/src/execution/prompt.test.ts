@@ -273,6 +273,78 @@ rules:
 		});
 	});
 
+	describe("Knowledge Base", () => {
+		it("should include Knowledge Base section when skills_dir has .md files", () => {
+			const skillsDir = join(testWorkDir, ".ralphy", "skills");
+			mkdirSync(skillsDir, { recursive: true });
+			writeFileSync(join(skillsDir, "deploy.md"), "# Deploy\nUse blue-green deployments.");
+			writeFileSync(join(skillsDir, "testing.md"), "# Testing\nAlways write unit tests.");
+
+			const result = buildPrompt({ task: "Test task", workDir: testWorkDir });
+
+			expect(result).toContain("## Knowledge Base");
+			expect(result).toContain("### deploy.md");
+			expect(result).toContain("Use blue-green deployments.");
+			expect(result).toContain("### testing.md");
+			expect(result).toContain("Always write unit tests.");
+		});
+
+		it("should not include Knowledge Base section when skills_dir is absent", () => {
+			const result = buildPrompt({ task: "Test task", workDir: testWorkDir });
+
+			expect(result).not.toContain("## Knowledge Base");
+		});
+
+		it("should not include Knowledge Base section when skills_dir has no .md files", () => {
+			const skillsDir = join(testWorkDir, ".ralphy", "skills");
+			mkdirSync(skillsDir, { recursive: true });
+			writeFileSync(join(skillsDir, "notes.txt"), "some notes");
+
+			const result = buildPrompt({ task: "Test task", workDir: testWorkDir });
+
+			expect(result).not.toContain("## Knowledge Base");
+		});
+
+		it("should not include Knowledge Base section when all .md files are empty", () => {
+			const skillsDir = join(testWorkDir, ".ralphy", "skills");
+			mkdirSync(skillsDir, { recursive: true });
+			writeFileSync(join(skillsDir, "empty.md"), "");
+
+			const result = buildPrompt({ task: "Test task", workDir: testWorkDir });
+
+			expect(result).not.toContain("## Knowledge Base");
+		});
+
+		it("should place Knowledge Base before the Task section", () => {
+			const skillsDir = join(testWorkDir, ".ralphy", "skills");
+			mkdirSync(skillsDir, { recursive: true });
+			writeFileSync(join(skillsDir, "guide.md"), "Follow the guide.");
+
+			const result = buildPrompt({ task: "Test task", workDir: testWorkDir });
+
+			const kbIndex = result.indexOf("## Knowledge Base");
+			const taskIndex = result.indexOf("## Task");
+			expect(kbIndex).toBeGreaterThan(-1);
+			expect(kbIndex).toBeLessThan(taskIndex);
+		});
+
+		it("should use custom skills_dir from config", () => {
+			writeFileSync(
+				join(testWorkDir, ".ralphy", "config.yaml"),
+				"project:\n  name: test\nskills_dir: custom-skills\n",
+			);
+			const customSkillsDir = join(testWorkDir, "custom-skills");
+			mkdirSync(customSkillsDir, { recursive: true });
+			writeFileSync(join(customSkillsDir, "custom.md"), "Custom skill content.");
+
+			const result = buildPrompt({ task: "Test task", workDir: testWorkDir });
+
+			expect(result).toContain("## Knowledge Base");
+			expect(result).toContain("### custom.md");
+			expect(result).toContain("Custom skill content.");
+		});
+	});
+
 	describe("No Final Note at End", () => {
 		it("should not have scattered Do NOT modify notes at the end", () => {
 			const result = buildPrompt({
@@ -549,6 +621,45 @@ describe("buildParallelPrompt", () => {
 
 			expect(checkpointIndex).toBeGreaterThan(rulesIndex);
 			expect(checkpointIndex).toBeLessThan(boundariesIndex);
+		});
+	});
+
+	describe("Knowledge Base", () => {
+		const testWorkDir3 = join(tmpdir(), "parallel-kb-test");
+		const ralphyDir3 = join(testWorkDir3, ".ralphy");
+
+		beforeEach(() => {
+			mkdirSync(ralphyDir3, { recursive: true });
+		});
+
+		afterEach(() => {
+			rmSync(testWorkDir3, { recursive: true, force: true });
+		});
+
+		it("should include Knowledge Base section when skills_dir has .md files", () => {
+			const skillsDir = join(ralphyDir3, "skills");
+			mkdirSync(skillsDir, { recursive: true });
+			writeFileSync(join(skillsDir, "style.md"), "Use consistent naming.");
+
+			const result = buildParallelPrompt({
+				task: "Test task",
+				progressFile: ".ralphy/progress.txt",
+				workDir: testWorkDir3,
+			});
+
+			expect(result).toContain("Knowledge Base:");
+			expect(result).toContain("### style.md");
+			expect(result).toContain("Use consistent naming.");
+		});
+
+		it("should not include Knowledge Base section when skills_dir is absent", () => {
+			const result = buildParallelPrompt({
+				task: "Test task",
+				progressFile: ".ralphy/progress.txt",
+				workDir: testWorkDir3,
+			});
+
+			expect(result).not.toContain("Knowledge Base:");
 		});
 	});
 
