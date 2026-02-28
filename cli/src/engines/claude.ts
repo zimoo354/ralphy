@@ -1,3 +1,4 @@
+import { logFileOp } from "../ui/logger.ts";
 import {
 	BaseAIEngine,
 	checkForErrors,
@@ -8,6 +9,45 @@ import {
 	parseStreamJsonResult,
 } from "./base.ts";
 import type { AIResult, EngineOptions, ProgressCallback } from "./types.ts";
+
+type ToolUseEvent = { tool: "Read" | "Write" | "Edit" | "Bash"; value: string };
+
+/**
+ * Extract tool_use events from a Claude stream-json line.
+ * Returns an array of tool use events found in the line.
+ */
+export function extractToolUseEvents(line: string): ToolUseEvent[] {
+	const trimmed = line.trim();
+	if (!trimmed.startsWith("{")) return [];
+
+	try {
+		const parsed = JSON.parse(trimmed);
+		if (parsed.type !== "assistant" || !Array.isArray(parsed.message?.content)) return [];
+
+		const events: ToolUseEvent[] = [];
+		for (const item of parsed.message.content) {
+			if (item.type !== "tool_use") continue;
+
+			switch (item.name) {
+				case "Read":
+					if (item.input?.file_path) events.push({ tool: "Read", value: item.input.file_path });
+					break;
+				case "Write":
+					if (item.input?.file_path) events.push({ tool: "Write", value: item.input.file_path });
+					break;
+				case "Edit":
+					if (item.input?.file_path) events.push({ tool: "Edit", value: item.input.file_path });
+					break;
+				case "Bash":
+					if (item.input?.command) events.push({ tool: "Bash", value: item.input.command });
+					break;
+			}
+		}
+		return events;
+	} catch {
+		return [];
+	}
+}
 
 const isWindows = process.platform === "win32";
 
@@ -120,6 +160,14 @@ export class ClaudeEngine extends BaseAIEngine {
 				const step = detectStepFromOutput(line);
 				if (step) {
 					onProgress(step);
+				}
+
+				// Log file operations from tool_use events
+				for (const { tool, value } of extractToolUseEvents(line)) {
+					if (tool === "Read") logFileOp("read", value);
+					else if (tool === "Write") logFileOp("write", value);
+					else if (tool === "Edit") logFileOp("edit", value);
+					else if (tool === "Bash") logFileOp("bash", value);
 				}
 			},
 			undefined,

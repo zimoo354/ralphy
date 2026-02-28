@@ -66,18 +66,20 @@ export function formatDuration(ms: number): string {
 	return `${mins}m ${remainingSecs}s`;
 }
 
-type FileOp = "read" | "write" | "edit";
+type FileOp = "read" | "write" | "edit" | "bash";
 
 const FILE_OP_COLORS: Record<FileOp, (s: string) => string> = {
 	read: pc.cyan,
 	write: pc.green,
 	edit: pc.yellow,
+	bash: pc.magenta,
 };
 
 const FILE_OP_LABELS: Record<FileOp, string> = {
 	read: "[READ]",
 	write: "[WRITE]",
 	edit: "[EDIT]",
+	bash: "[BASH]",
 };
 
 /**

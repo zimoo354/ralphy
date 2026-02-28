@@ -35,4 +35,12 @@ describe("logFileOp", () => {
 		expect(label).toContain("EDIT");
 		expect(path).toBe("src/config.ts");
 	});
+
+	it("logs bash operation with command", () => {
+		logFileOp("bash", "npm run build");
+		expect(consoleSpy).toHaveBeenCalledTimes(1);
+		const [label, cmd] = consoleSpy.mock.calls[0];
+		expect(label).toContain("BASH");
+		expect(cmd).toBe("npm run build");
+	});
 });
