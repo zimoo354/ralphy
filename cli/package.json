@@ -1,5 +1,5 @@
 {
-	"name": "ralphy-cli",
+	"name": "@ralphy/cli",
 	"version": "4.7.2",
 	"description": "Autonomous AI Coding Loop - Supports Claude Code, OpenCode, Codex, Cursor, Qwen-Code, Factory Droid, GitHub Copilot and Gemini CLI",
 	"type": "module",
