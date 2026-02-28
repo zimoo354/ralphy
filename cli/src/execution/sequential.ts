@@ -1,4 +1,7 @@
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { logTaskProgress } from "../config/writer.ts";
+import { claudeEngineEvents } from "../engines/claude.ts";
 import type { AIEngine, AIResult } from "../engines/types.ts";
 import { createTaskBranch, returnToBaseBranch } from "../git/branch.ts";
 import { syncPrdToIssue } from "../git/issue-sync.ts";
@@ -10,6 +13,34 @@ import { ProgressSpinner } from "../ui/spinner.ts";
 import { clearDeferredTask, recordDeferredTask } from "./deferred.ts";
 import { buildPrompt } from "./prompt.ts";
 import { isFatalError, isRetryableError, sleep, withRetry } from "./retry.ts";
+
+/** Name of the checkpoint file written when context window threshold is reached */
+export const CONTEXT_CHECKPOINT_FILE = "context-checkpoint.md";
+
+/**
+ * Format the contents of the context checkpoint file.
+ * Called when the context-window-threshold event fires during streaming.
+ */
+export function formatContextCheckpoint(
+	taskTitle: string,
+	data: { cumulativeInputTokens: number; threshold: number; maxContextTokens: number },
+): string {
+	return [
+		"# Context Checkpoint",
+		"",
+		`**Task:** ${taskTitle}`,
+		`**Timestamp:** ${new Date().toISOString()}`,
+		"",
+		"## Context Window Status",
+		`- Cumulative input tokens: ${data.cumulativeInputTokens.toLocaleString()}`,
+		`- Threshold: ${Math.round(data.threshold * 100)}% of ${data.maxContextTokens.toLocaleString()} tokens`,
+		"",
+		"## Instructions for Continuation",
+		"The context window reached its limit during the previous run.",
+		"Review any uncommitted changes and commit them before continuing.",
+		"Then complete the remaining work for this task.",
+	].join("\n");
+}
 
 export interface ExecutionOptions {
 	engine: AIEngine;
@@ -114,8 +145,14 @@ export async function runSequential(options: ExecutionOptions): Promise<Executio
 			}
 		}
 
-		// Build prompt
-		const prompt = buildPrompt({
+		// Read checkpoint from a previous context-window restart (if any)
+		const checkpointPath = join(workDir, CONTEXT_CHECKPOINT_FILE);
+		const existingCheckpoint = existsSync(checkpointPath)
+			? readFileSync(checkpointPath, "utf-8")
+			: null;
+
+		// Build prompt (prepend checkpoint context when continuing after a restart)
+		let prompt = buildPrompt({
 			task: task.body || task.title,
 			autoCommit,
 			workDir,
@@ -124,14 +161,29 @@ export async function runSequential(options: ExecutionOptions): Promise<Executio
 			skipLint,
 			prdFile: options.prdFile,
 		});
+		if (existingCheckpoint) {
+			prompt = `${existingCheckpoint}\n\n${prompt}`;
+		}
 
 		// Execute with spinner
 		const spinner = new ProgressSpinner(task.title, activeSettings);
 		let aiResult: AIResult | null = null;
 
+		let contextWindowHit = false;
+		const onContextWindowThreshold = (data: {
+			cumulativeInputTokens: number;
+			threshold: number;
+			maxContextTokens: number;
+		}) => {
+			contextWindowHit = true;
+			writeFileSync(checkpointPath, formatContextCheckpoint(task.title, data), "utf-8");
+			logWarn(`Context window threshold reached for "${task.title}". Task will restart.`);
+		};
+
 		if (dryRun) {
 			spinner.success("(dry run) Skipped");
 		} else {
+			claudeEngineEvents.on("context-window-threshold", onContextWindowThreshold);
 			try {
 				aiResult = await withRetry(
 					async () => {
@@ -170,7 +222,10 @@ export async function runSequential(options: ExecutionOptions): Promise<Executio
 					},
 				);
 
-				if (aiResult.success) {
+				if (contextWindowHit) {
+					// Context window was hit — checkpoint already written, restart the task
+					spinner.success("Context limit — restarting");
+				} else if (aiResult.success) {
 					spinner.success(undefined, true); // Show timing breakdown
 					result.totalInputTokens += aiResult.inputTokens;
 					result.totalOutputTokens += aiResult.outputTokens;
@@ -179,6 +234,11 @@ export async function runSequential(options: ExecutionOptions): Promise<Executio
 					await taskSource.markComplete(task.id);
 					logTaskProgress(task.title, "completed", workDir);
 					result.tasksCompleted++;
+
+					// Clean up checkpoint now that the task is fully done
+					if (existsSync(checkpointPath)) {
+						unlinkSync(checkpointPath);
+					}
 
 					// Sync PRD to GitHub issue if configured
 					if (syncIssue && options.prdFile) {
@@ -272,6 +332,8 @@ export async function runSequential(options: ExecutionOptions): Promise<Executio
 					await taskSource.markComplete(task.id);
 					clearDeferredTask(taskSource.type, task, workDir, options.prdFile);
 				}
+			} finally {
+				claudeEngineEvents.off("context-window-threshold", onContextWindowThreshold);
 			}
 		}
 
