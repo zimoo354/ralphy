@@ -47,7 +47,18 @@ export async function POST(request: Request) {
 	const runs = readRuns();
 	runs.push(run);
 	writeRuns(runs);
-	writeRunArgs(runId, { cwd: cmd.cwd, argv: cmd.argv });
+	writeRunArgs(runId, {
+		cwd: cmd.cwd,
+		argv: cmd.argv,
+		engine: body.engine,
+		runTests: body.runTests,
+		runLint: body.runLint,
+		fast: body.fast,
+		parallel: body.parallel,
+		maxParallel: body.maxParallel,
+		sandbox: body.sandbox,
+		createPr: body.createPr,
+	});
 
 	try {
 		startRun(runId, { cwd: cmd.cwd, argv: cmd.argv });
