@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve, sep } from "node:path";
 
@@ -137,6 +137,16 @@ export function validateRepoPath(
  */
 export function getRunDir(runId: string): string {
 	return join(getStorageDir(), RUNS_SUBDIR, runId);
+}
+
+/**
+ * Delete a run's data directory (logs, args, tasks). No-op if dir does not exist.
+ */
+export function deleteRunDir(runId: string): void {
+	const dir = getRunDir(runId);
+	if (existsSync(dir)) {
+		rmSync(dir, { recursive: true });
+	}
 }
 
 /**

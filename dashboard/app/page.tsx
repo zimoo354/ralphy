@@ -16,6 +16,7 @@ export default function Home() {
 			<DashboardMain
 				refreshTrigger={refreshTrigger}
 				onRunStopped={onRefresh}
+				onRunDeleted={onRefresh}
 			/>
 		</div>
 	);

@@ -29,6 +29,7 @@ interface RunDetailsData {
 interface RunDetailsProps {
 	runId: string | null;
 	onRunStopped?: () => void;
+	onRunDeleted?: () => void;
 }
 
 function formatDuration(startedAt?: string, endedAt?: string): string | null {
@@ -61,10 +62,15 @@ function formatOptions(args?: RunArgs): string {
 	return opts.length ? opts.join(", ") : "—";
 }
 
-export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
+export function RunDetails({
+	runId,
+	onRunStopped,
+	onRunDeleted,
+}: RunDetailsProps) {
 	const [details, setDetails] = useState<RunDetailsData | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [stopping, setStopping] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 
 	const load = useCallback(async (id: string) => {
 		setLoading(true);
@@ -104,6 +110,19 @@ export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
 			setStopping(false);
 		}
 	}, [runId, details?.status, load, onRunStopped]);
+
+	const handleDelete = useCallback(async () => {
+		if (!runId || !confirm("Delete this run?")) return;
+		setDeleting(true);
+		try {
+			const res = await fetch(`/api/runs/${runId}`, { method: "DELETE" });
+			if (res.ok) {
+				onRunDeleted?.();
+			}
+		} finally {
+			setDeleting(false);
+		}
+	}, [runId, onRunDeleted]);
 
 	if (!runId) {
 		return (
@@ -156,16 +175,26 @@ export function RunDetails({ runId, onRunStopped }: RunDetailsProps) {
 				<span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
 					{details.status}
 				</span>
-				{details.status === "running" && (
+				<div className="flex shrink-0 gap-2">
+					{details.status === "running" && (
+						<button
+							type="button"
+							onClick={handleStop}
+							disabled={stopping}
+							className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 dark:bg-red-700 dark:hover:bg-red-800"
+						>
+							{stopping ? "Stopping…" : "Stop"}
+						</button>
+					)}
 					<button
 						type="button"
-						onClick={handleStop}
-						disabled={stopping}
-						className="shrink-0 rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50 dark:bg-red-700 dark:hover:bg-red-800"
+						onClick={handleDelete}
+						disabled={deleting}
+						className="rounded border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
 					>
-						{stopping ? "Stopping…" : "Stop"}
+						{deleting ? "Deleting…" : "Delete"}
 					</button>
-				)}
+				</div>
 			</div>
 			<div className="mb-3 shrink-0 rounded border border-zinc-200 bg-zinc-50/50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
 				<div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1">
